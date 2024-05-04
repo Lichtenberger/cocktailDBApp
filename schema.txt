@@ -1,0 +1,12 @@
+Schema for Cocktail App
+
+Table 1 - Users
+    username
+    password
+
+Table 2 - Cocktails
+    name
+    image
+    instructions
+    ingredients
+    measurements

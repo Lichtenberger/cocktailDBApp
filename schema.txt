@@ -1,8 +1,9 @@
 Schema for Cocktail App
 
-Table 1 - Users
+Table 1 - User
     username
     password
+    email
 
 Table 2 - Cocktails
     name

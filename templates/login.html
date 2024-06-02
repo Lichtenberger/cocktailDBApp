@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block body_class %}onboarding{% endblock %}
+
+{% block content %}
+
+  <div class="row justify-content-md-center">
+    <div class="col-md-7 col-lg-5">
+      <h2 class="join-message">Welcome back.</h2>
+
+      <form method="POST" id="login">
+        <label for="username">Username:</label><br>
+        <input type="text" name="username"><br><br>
+        <label for="password">Password:</label><br>
+        <input type="text" name="password"><br><br>
+        <input type="submit" id="login-button" value="'Login">
+      </form>
+
+      <form action="/register" id="register">
+        <label for="registration">New to the club?</label>
+        <input type="submit" id="reg-button" value="Sign Up Today">
+      </form>
+    </div>
+    {% if error: %}
+    <div id="error-box">
+        <p>{{error}}</p>
+    </div>
+    {% endif %}
+  </div>
+
+{% endblock %}

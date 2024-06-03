@@ -7,7 +7,5 @@ Table 1 - User
 
 Table 2 - Cocktails
     name
-    image
     instructions
     ingredients
-    measurements

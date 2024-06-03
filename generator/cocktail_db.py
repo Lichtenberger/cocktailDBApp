@@ -22,7 +22,8 @@ con.autocommit = True
 def double_apostrophe(string):
     final = ''
     for c in string:
-        if c == "'" * 2
+        if c == "'":
+            final += "'" * 2
     else:
         final += c
     return final
@@ -144,7 +145,7 @@ def db_init():
     initial_table_insert(dataset=normalize_rows(column=cocktails.Ingredients), table_name='ingredients')
     insert_data_into_cocktails()
     insert_cocktail_ingredients
-    add_user_tables()
+    add_user_table()
     con.commit()
     con.close()
 

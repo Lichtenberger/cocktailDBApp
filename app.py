@@ -1,34 +1,52 @@
-from flask import Flask, render_template, redirect, request, url_for, g
-from sqlalchemy import func
-from flask_sqlalchemy import SQLALchemy
+from flask import Flask, render_template, redirect, request, url_for, session, g
+from sqlalchemy import func, create_engine, exc
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.automap import automap_base
 import random
 import os 
 
-# from forms import LoginForm, UserAddForm, CocktailForm
-# from models import db, connect_db, User, Cocktails
-
-# CURR_USER_KEY = 'curr_user'
+CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('COCKTAILS_FLASK_KEY')
+app.app_context().push()
 
-ENV - 'prod'
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    os.environ.get('DATABASE_URL', 'postgresql://cocktails.db'))
 
-if ENV == 'dev':
-    password = os.environ.get('POSTGRE_PASS')
-    app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql:{password}@localhost:5432/cocktailpg'
-else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = False
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
 
 db = SQLAlchemy(app)
-table_names = db.engine.table_names()
 Base = automap_base()
-Base.prepare(db.engine, replect=True)
+Base.prepare(autoload_with=db.engine)
 
 cocktails = Base.classes.cocktails
 ingredients = Base.classes.ingredients
 users = Base.classes.users
+
+@app.before_request
+def add_user_to_g():
+    """If we're logged in, add curr user to Flask global."""
+
+    if CURR_USER_KEY in session:
+        g.user = User.query.get(session[CURR_USER_KEY])
+
+    else:
+        g.user = None
+
+def do_login(user):
+    """Log in user."""
+
+    session[CURR_USER_KEY] = user.id
+
+
+def do_logout():
+    """Logout user."""
+
+    if CURR_USER_KEY in session:
+        del session[CURR_USER_KEY]
 
 def delete_user_cocktail(cocktail_name):
     user = db.session.query(users).filter(user.username == g['username'])[0]
@@ -159,7 +177,7 @@ def profile():
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if 'username' in request.form and 'password' in request.for,:
+        if 'username' in request.form and 'password' in request.form:
             username = request.form['username']
             password = request.form['password']
             user_valid = check_input_valid(username, username=True)
@@ -216,4 +234,5 @@ def register():
 
 
 if __name__ == '__main__':
+
     app.run()

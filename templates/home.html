@@ -2,7 +2,7 @@
 {% set drink = drinks[0] %}
 {% set post = DrinkPost.query.filter_by(drink_id=drink.id).first() %}
 
-<h2 class="text-center mt-2">Suggestions</h2>
+<h2 class="text-center mt-2">You might like this one!</h2>
 
 <div class="container-fluid col-12 col-lg-8 mx-auto mt-3 pt-3 pb-3 bg-light">
 	<div id="suggestionsCarousel" class="carousel slide" data-bs-ride="carousel">

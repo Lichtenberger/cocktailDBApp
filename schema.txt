@@ -1,11 +1,48 @@
 Schema for Cocktail App
 
-Table 1 - User
+Table - User
+    id
     username
     password
-    email
+    drinkposts
 
-Table 2 - Cocktails
+Table - Drink
+    id
+    api_id
     name
+    category_id
+    category
     instructions
-    ingredients
+    image
+
+Table - Ingredients
+    id
+    name
+    description
+    abv
+
+Table - Category
+    id
+    name
+
+Table - DrinkIngredient
+    id
+    drink_id
+    ingredient_id
+    measurement
+    drink
+    ingredient
+
+Table - Favorite
+    id
+    user_id
+    drink_id
+    user
+    drink
+
+Table - DrinkPost
+    id
+    user_id
+    drink_id
+    user
+    drink

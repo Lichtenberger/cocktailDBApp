@@ -1,0 +1,130 @@
+.nav-img {
+    width: 175px;
+    height: 50px;
+    border-radius: .08cm;
+}
+
+i.bi-heart {
+    font-size: 1.5rem;
+}
+
+a.btn-outline-light {
+    transition: all, ease-in-out, .4s;
+}
+
+a.btn-outline-light:hover {
+    background-color: #d9534f;
+    border-color: #d9534f;
+    transition: all, ease-in-out, .4s;
+}
+
+i.bi-plus-lg {
+    font-size: 1.75rem;
+    color: #abb6c2;
+}
+
+i.bi-plus-lg:hover {
+    color: #5cb85c;
+}
+
+i:hover, a.ing-item {
+    cursor: pointer;
+}
+
+i.bi-dash-circle {
+    font-size: 1.35rem;
+}
+
+i.bi-dash-circle:hover, i.bi-trash:hover {
+    color: #d9534f;
+}
+
+i.bi-trash {
+    color: #2b3e50
+}
+
+i.bi-x-lg {
+    position: fixed;
+}
+
+a.text-info:hover {
+text-decoration: none;
+}
+
+.title-und {
+    text-decoration: underline;
+}
+
+button.btn {
+    border-radius: .08cm;
+}
+
+a.btn {
+    border-radius: .08cm;
+}
+
+div.alert {
+    width: 75%;
+    border-radius: .08cm;
+}
+
+/* Responsive Queries for mobile */
+
+/* Extra small - default bootstrap breakpoint */
+
+@media only screen and (max-width: 575px) {
+
+    h5.add-msg {
+        line-height: 25px;
+    }
+
+    a.btn-primary {
+        margin-top: 5px;
+    }
+
+    a.logout {
+        margin-top: 23px;
+        margin-bottom: 5px;
+    }
+
+    form#search_form {
+        margin-top: 15px;
+        display: flex;
+        flex-flow: nowrap;
+    }
+}
+
+/* Applies to small breakpoint */
+
+@media only screen and (min-width: 576px) and (max-width: 1399px) {
+    form#search_form {
+        margin-top: 15px;
+        display: flex;
+        flex-flow: nowrap;
+    }
+
+    a.logout {
+        margin-top: 23px;
+        margin-bottom: 8px;
+    }
+
+    div.card-small {
+        margin-bottom: 25px;
+    }
+}
+
+
+/* Applies to large breakpoint */
+
+@media only screen and (min-width: 1400px) {
+
+    form#search_form {
+        display: flex;
+        flex-flow: nowrap;
+        padding-right: 5px;
+    }
+
+    div.card-small {
+        margin-bottom: 25px;
+    }
+}

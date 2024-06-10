@@ -1,72 +1,56 @@
-{% extends 'base.html' %}
-<link rel="stylesheet" href="/static/profile.css">
+{% extends 'base.html' %} {% block content %}
 
-<div class="wrapper">
-    <div id="h1-wrapper">
-        <h1>Hello, {{username}}</h1>
-        <div id="stored">
-            <form action="stored">
-                <input type="submit" value="Your saved drinks">
-            </form>
-        </div>
-        <div id="logout">
-            <form action="/profile/logout">
-                <input type="submit" value="logout">
-            </form>
-        </div>
-    </div>
-    <div class="content">
-
-        <div id="forms-wrapper">
-            <div id="search">
-                <form action="profile" method="post">
-                    <input type="text" name="search" onfocus="this.value = ''" value="Select a cocktail name or ingredient of choice"><br>
-                    <label for="">* 3 characters or more</label><br><br>
-                </form>
-            </div>
-
-            <div id="random">
-                <form action="profile" method="post">
-                    <input type="submit" name="random" value="Get random drink.">
-                </form>
-            </div>
-            <br>
-        </div>
-
-        <div id="search-display">
-            <form action="profile" method="post">
-                {% for name in names: %}
-                    <input type="submit" name="select" value="{{name}}"><br>
-                {% endfor %}
-            </form>
-        </div>
-
-        <div id="info-display">
-            {% if content %}
-                <div class="main-wrapper">
-                    <h2>Drink:</h2>
-                    {% for item in content[0]: %}
-                        {% if item == content[0][0]: %}
-                            <p>Name: {{item}}</p>
-                        {% elif item == content[0][1]: %}
-                            <p>Instructions: {{item}}</p>
-                        {% end if %}
-                    {% endfor %}
-                </div>
-                <div class="ingredients-wrapper">
-                    <h3>Ingredients</h3>
-                    {% for item in content[1]: %}
-                        <ul>
-                            <li>{{item}}</li>
-                        </ul>
-                    {% endfor %}
-                </div>
-
-                <form id="store" action="profile" method="post">
-                    <input type="submit" name="store" value="Save">
-                </form>
-            {% endif %}
-        </div> 
-        <p id="store-info">*go to 'your cocktails' to see what you have saved</p>
-    </div>
+<div class="text-center mt-2">
+	<h2>{{user.username}}'s Profile Page</h2>
 </div>
+
+<div class="container-fluid row mx-auto justify-content-around align-content-start">
+	<div class="mt-5 col-12 col-md-5 text-center">
+		<h4>Favorites</h4>
+		<ul id="fav-list" class="list-group">
+			{% for drink in favorites %}
+			<li class="list-group-item">
+				<h6>{{drink.name}}</h6>
+				{% if g.user.username == user.username %}
+				<div class="container-fluid row justify-content-center pr-0 pl-0 mr-0 ml-0">
+					<a href="/{{drink.id}}/favorite/delete" class="btn btn-sm btn-danger col-3 col-md-2 text-center"><i class="bi bi-trash text-white"></i></a>
+				</div>
+				<br />
+				<br />
+				{% endif %}
+
+				<a href="/{{drink.id}}"><img class="thumb img-fluid" src="{{drink.image}}" alt="" /></a>
+				<hr class="mb-0" />
+			</li>
+			{% endfor %}
+		</ul>
+	</div>
+
+	<div class="mt-5 col-12 col-md-5 text-center">
+		<h4>Drink Posts 
+			{% if g.user.username == user.username %}
+			<a href="/drinks/add" class="ml-2"><i class="bi bi-plus-lg"></i></a>
+			{% endif %}
+		</h4>
+		<ul id="post-list" class="list-group">
+			{% for drink in posts %}
+			<li class="list-group-item">
+				<h6>{{drink.name}}</h6>
+				{% if g.user.username == user.username %}
+				<div class="container-fluid row justify-content-center pr-0 pl-0 mr-0 ml-0">
+					<a href="/{{drink.id}}/edit" class="btn btn-sm btn-warning text-center col-3 col-md-2 mr-3"><i class="bi bi-pencil-square"></i></a>
+					<a href="/delete/{{drink.id}}" class="btn btn-sm btn-danger text-center col-3 col-md-2 ml-3"><i class="bi bi-trash text-white"></i></a>
+				</div>
+				<br />
+				<br />
+				{% endif %}
+
+				<a href="/{{drink.id}}"><img class="thumb img-fluid" src="{{drink.image}}" alt="" /></a>
+				<hr class="mb-0" />
+			</li>
+			{% endfor %}
+		</ul>
+	</div>
+</div>
+
+{% endblock %}

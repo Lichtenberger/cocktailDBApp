@@ -1,0 +1,6 @@
+ id | api_id |   name    | category_id |   instructions    |                                            image                                            
+----+--------+-----------+-------------+-------------------+---------------------------------------------------------------------------------------------
+  1 |        | drink1    |           1 | test instructions | 
+  5 |        | beer bong |           1 |                   | https://www.pexels.com/photo/black-laptop-computer-turned-on-showing-computer-codes-177598/
+(2 rows)
+

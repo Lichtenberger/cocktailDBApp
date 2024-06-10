@@ -1,238 +1,535 @@
-from flask import Flask, render_template, redirect, request, url_for, session, g
-from sqlalchemy import func, create_engine, exc
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.ext.automap import automap_base
+from flask import Flask, render_template, redirect, session, g, flash, url_for
+from sqlalchemy.exc import IntegrityError
+from jinja2 import Environment, select_autoescape
 import random
 import os 
+import math
+from models import connect_db, db, User, Drink, Ingredient, DrinkIngredient, Category, Favorite, DrinkPost
+from forms import SignupForm, LoginForm, DrinkForm, SearchForm, IngredientsForm, EditDrinkIngredientForm
 
 CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
-app.app_context().push()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    os.environ.get('DATABASE_URL', 'postgresql://cocktails.db'))
-
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost:5432/cocktailsdb')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
 
-db = SQLAlchemy(app)
-Base = automap_base()
-Base.prepare(autoload_with=db.engine)
+# app.jinja_env = Environment(autoescape=select_autoescape(['html', 'xhtml']), undefined='strict')
 
-cocktails = Base.classes.cocktails
-ingredients = Base.classes.ingredients
-users = Base.classes.users
 
-@app.before_request
+connect_db(app)
+
+@app.context_processor
+def inject_data():
+
+    categories = Category.query.order_by(Category.name).all()
+    search_form = SearchForm()
+    return dict(categories=categories, DrinkPost=DrinkPost, search_form=search_form)
+
+
+def inject_funcs():
+    
+    return dict(check_favorites=check_favorites, check_author=check_author, len=len, math=math)
+
+def check_favorites():
+    check_favorites = add_favorites_to_g()
+    pass
+app.jinja_env.globals.update(check_favorites=check_favorites)
+    
+def check_author(post):
+    if g.user == post.user:
+        return True
+    else: 
+        return False
+    
+app.jinja_env.globals.update(check_author=check_author)
+
+@app.before_request   
 def add_user_to_g():
-    """If we're logged in, add curr user to Flask global."""
 
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
-
     else:
         g.user = None
 
-def do_login(user):
-    """Log in user."""
+@app.before_request
+def add_favorites_to_g():
+
+    if g.user:
+        g.favorites = [f.drink for f in g.user.favorites]
+    else: 
+        g.favorites = None
+        
+
+def sess_login(user):
 
     session[CURR_USER_KEY] = user.id
 
-
-def do_logout():
-    """Logout user."""
+def sess_logout():
 
     if CURR_USER_KEY in session:
         del session[CURR_USER_KEY]
 
-def delete_user_cocktail(cocktail_name):
-    user = db.session.query(users).filter(user.username == g['username'])[0]
-    cocktail = db.session.query(cocktails).filter(cocktails.name == cocktail_name)[0]
-    user.cocktails_collection.remove(cocktail)
-    db.session.commit()
+def get_random_drink():
+        count = 0
+        drink_list = []
 
+        while count < 3:
+            drinks = Drink.query.all()
+            idx = random.randint(0, len(drinks) - 1)
+            drink_list.append(drinks[idx])
+            count += 1
 
-def get_user_cocktails():
-    user = db.session.query(users).filter(users.username == g['username'])[0]
-    return user.cocktails_collection
+        return drink_list
 
+@app.route("/")
+def show_home():
+    """Show homepage - if logged in showcase random drink"""
 
-def display_cocktail(chosen):
-    main_items = [chosen.name, chosen.prep]
-    chosen_ingredients = [i.name for i in chosen.ingredients_collection]
-    cocktail_info = [main_items, chosen_ingredients]
-    return cocktail_info
-
-def random_cocktail():
-    cocktail_query = db.session.query(cocktails).all()
-    chosen = random.choice(cocktail_query)
-    cocktail_info = display_cocktail(chosen)
-    return cocktail_info
-
-def check_input_valid(string, username=False, password=False):
-    if string.isspace() or string == '':
-        g['error_message'] = "Field can't be empty"
-        return False
-    try:
-        string.encode(encoding='utf-8').decode('ascii')
-    except UnicodeDecodeError:
-        g['error_message'] = "Please use english characters"
-    if len(string) < 4 and string != ' ':
-        if username:
-            g['error_message'] = 'Username must be at least 4 characters long'
-        if password:
-            g['error_message'] = 'Password must be at least 8 characters long'
-        return False
-    return True
-
-
-def serach_valid(user_input):
-    if len(user_input) <= 2:
-        return False
-    return True
-
-
-def add_user(new_username, new_password):
-    new_user = users(username=new_username, password=new_password)
-    db.session.add(new_user)
-    db.session.commit()
-
-
-def name_search_results(user_input):
-    user_input = user_input.lower()
-    cocktail_query = db.session.query(cocktails).filter(func.lower(cocktails.name).contains(user_input)).all()
-    ingredient_query = db.session.query(ingredients).filter(func.lower(ingredients.name).contains(user_input)).all()
-    result_names = []
-    for cocktail in cocktail_query:
-        result_names.append(cocktail.name)
-    for ingredient in ingredient_query:
-        query = db.session.query(cocktails).filter(cocktails.ingredients_collection.contains(ingredient)).all()
-        for cocktail in query:
-            result_names.append(cocktail.name)
-    return result_names
-
-
-def selection_query(selection):
-    query = db.session.query(cocktails).filter(cocktails.name == selcetion).all()
-    chosen = query[0]
-    cocktail_info = display_cocktail(chosen)
-    return cocktail_info
-
-
-def check_username_valid(username):
-    user_query = db.session.query(users).all()
-    user_names = [user.username for user in user_query]
-    if username in user_names:
-        g['error message'] = 'Username already exists'
-        return False
+    if g.user and g.favorites:
+        return render_template("home.html", drinks=drinks)
+    elif g.user and not g.favorites: 
+        drinks = get_random_drink()
+        return render_template('home.html', drinks=drinks)
     else: 
-        return True
+        return render_template('home.html')
 
 
-def check_for_user(input_username, input_password):
-    user_query = db.session.query(users).all()
-    for user in user_query:
-        if user.__dict__['username'] == input_username and user.__dict__['password'] == input_password:
-            return True
-        g['error_message'] = 'Incorrect login, User not found'
-        return False
-    
+@app.route("/signup", methods=["GET", "POST"])
+def signup_user():
+    """Signup a new user via class method, save hashed password to database"""
 
-def user_store_cocktail(cocktail_name):
-    user = db.session.query(users).filter(users.username == g['username'])[0]
-    cocktail = db.session.query(cocktails).filter(cocktails.name == cocktail_name)[0]
-    user.cocktails_collection.append(cocktail)
-    db.session.commit()
+    form = SignupForm()
 
-
-@app.route('/profile', method=['GET', 'POST'])
-def profile():
-    if g['login_success']:
-        username = g['username']
-        if request.method == 'POST':
-            if request.form.get('search'):
-                if serach_valid(request.form['search']):
-                    names = name_search_results(request.form['search'])
-                    return render_template('profile.html', names=names, username=username)
-                else:
-                    return render_template('profile.html', username=username)
-            if request.form.get('select') or request.form.get('random'):
-                if request.form.get('select'):
-                    cocktail = selection_query(request.form['select'])
-                    g['last_displayed'] = cocktail
-                else:
-                    cocktail = random_cocktail()
-                    g['last_displayed'] = cocktail
-            if request.form.get('store'):
-                cocktail = g['last_displayed']
-                cocktail_name = cocktail[0][0]
-                user_store_cocktail(cocktail_name)
-            return render_template('profile.html', content=cocktail, username=username)
-        return render_template('profile.html', username=username)
-    
-
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        if 'username' in request.form and 'password' in request.form:
-            username = request.form['username']
-            password = request.form['password']
-            user_valid = check_input_valid(username, username=True)
-            password_valid = check_input_valid(password, password=True)
-            if not user_valid or not password_valid:
-                return render_template('login.html', error=g['error_message'])
-            else:
-                if check_for_user(username, password):
-                    g['login_success'] = True
-                    g['username'] = username
-                    return redirect(url_for('profile'))
-                else:
-                    return render_template('login.html', error=g['error_message'])
-        return render_template('login.html')
-    
-
-@app.route('/profile/logout')
-def logout():
-    g.clear()
-    return redirect(url_for('login'))
-
-
-@app.route('/stored', method=['GET', 'POST'])
-def stored():
-    if g['login_success']:
-        if request.method == 'POST':
-            if request.form.get('delete-one'):
-                to_delete = request.form.getlist('delete-one')
-                for cocktail in to_delete:
-                    delete_user_cocktail(cocktail_name=cocktail)
-        cocktails = get_user_cocktails()
-        if request.form.get('delete'):
-            return render_template('stored.html', cocktails=cocktails, delete_mode=True)
-        else:
-            return render_template('stored.html', cocktails=cocktails)
+    if form.validate_on_submit():
         
+            try:
+                user = User.signup(
+                    username=form.username.data,
+                    password=form.password.data,
+                )
+                db.session.commit()
+                sess_login(user)
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        if 'new_username' in request.form and 'new_password' in request.form:
-            new_username = request.form['new_username']
-            new_password = request.form['new_password']
-            user_valid = check_input_valid(new_username, username=True)
-            password_valid = check_input_valid(new_password, password=True)
-            if not check_for_user(username=new_username):
-                return render_template('register.html', error=g['error_message'])
-            if not user_valid or not password_valid:
-                return render_template('register.html', error=g['error_message'])
-            if user_valid and password_valid:
-                add_user(new_username=username, new_password=new_password)
-                return redirect(url_for('login'))
-    return render_template('register.html')
+                flash(f"Welcome {user.username}!", "success")
+                return redirect("/")
+            except IntegrityError:
+                db.session.rollback()
+                flash("Sorry, that username is already taken!", "danger")
+                return render_template("signup.html", form=form)
+    else:
+        return render_template("signup.html", form=form)
 
 
-if __name__ == '__main__':
+@app.route("/login", methods=["GET", "POST"])
+def login_user():
+    """Authenticate user via class method and login"""
 
-    app.run()
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        try:
+            user = User.authenticate(
+                username=form.username.data, password=form.password.data
+            )
+            sess_login(user)
+            flash(f"Welcome back, {user.username}!", "success")
+            return redirect("/")
+        except:
+            flash("Sorry, please try again!", "danger")
+            return render_template("login.html", form=form)
+    else:
+        return render_template("login.html", form=form)
+
+
+@app.route("/logout")
+def logout_user():
+    """Log a user out"""
+
+    sess_logout()
+    flash(f"{g.user.username} has now been logged out.", "warning")
+    return redirect("/")
+
+
+@app.route("/profile/<int:user_id>")
+def show_user_profile(user_id):
+    """Show user information"""
+
+    user = User.query.get_or_404(user_id)
+    favorites = []
+    drinkposts = []
+
+    for favs in user.favorites:
+        fav_drink = Drink.query.get_or_404(favs.drink_id)
+        favorites.append(fav_drink)
+
+    for posts in user.drinkposts:
+        drink = Drink.query.get_or_404(posts.drink_id)
+        drinkposts.append(drink)
+
+    return render_template(
+        "profile.html", user=user, favorites=favorites, posts=drinkposts
+    )
+
+
+@app.route("/<int:drink_id>/favorite/add")
+def add_favorite(drink_id):
+    """Add user favorite to database"""
+
+    if g.user:
+        f = Favorite(user_id=g.user.id, drink_id=drink_id)
+
+        db.session.add(f)
+        db.session.commit()
+
+        flash("Drink successfully added!", "success")
+        return redirect(f"/{drink_id}")
+    else:
+        flash("You must be logged in to add favorites!", "warning")
+        return redirect("/login")
+
+
+@app.route("/<int:drink_id>/favorite/delete", methods=['GET', 'POST'])
+def delete_favorite(drink_id):
+    """Delete user favorite from database"""
+
+    f = Favorite.query.filter_by(drink_id=drink_id, user_id=g.user.id).first()
+
+
+    if f:
+        db.session.delete(f)
+        db.session.commit()
+        flash('Delete successful', 'seccess')
+        return redirect(url_for('show_drink_details', drink_id=drink_id))
+    else:
+        flash('Favorite not found', 'danger')
+        return redirect(url_for('show_drink_details', drink_id=drink_id))
+
+
+@app.route('/drink/<int:drink_id>')
+def drink_details(drink_id):
+
+    drink = Drink.query.get_or_404(drink_id)
+    return render_template('drink-details.html', drink=drink, check_author=check_author)
+
+@app.route("/<int:drink_id>")
+def show_drink_details(drink_id):
+    """Show details for a specific drink"""
+
+    drink = Drink.query.get_or_404(drink_id)
+    ingredients = drink.ingredients
+    likes = len(drink.favorites)
+
+    return render_template(
+        "drink-details.html",
+        drink=drink,
+        ingredients=ingredients,
+        User=User,
+        Ingredient=Ingredient,
+        DrinkPost=DrinkPost
+    )
+
+
+@app.route("/drinks/category/<int:category_id>")
+def show_category_drinks(category_id):
+    """Show all drinks in a category"""
+
+    category = Category.query.get_or_404(category_id)
+    drinks = category.drinks
+
+    return render_template("drinks.html", drinks=drinks, title=f"{category.name}")
+
+@app.route("/drinks/add", methods=["GET", "POST"])
+def add_drink():
+    """Add user drink to database"""
+
+    form = DrinkForm()
+
+    form.category_id.choices = [
+        (c.id, c.name) for c in Category.query.order_by(Category.name).all()
+    ]
+    form.category_id.choices.insert(0, (None, "Select the category"))
+    
+
+    try:
+        if form.validate_on_submit():
+            if g.user:
+                if form.category_id.data != 'None':
+                    d = Drink(
+                        name=form.name.data,
+                        category_id=form.category_id.data,
+                        image=form.image.data,
+                    )
+
+                    db.session.add(d)
+                    db.session.commit()
+
+                    dp = DrinkPost(user_id=g.user.id, drink_id=d.id)
+
+                    db.session.add(dp)
+                    db.session.commit()
+
+                    flash(
+                        f"{d.name} has been added, now for the ingredients!",
+                        "success",
+                    )
+                    flash('If optional measurements are missing their conterpart, they will be ignored.', 'info')
+                    return redirect(f"/{d.id}/ingredients/add")
+                else:
+                    flash(
+                        "A category must be selected before adding a drink!",
+                        "warning",
+                    )
+                    return render_template("add-drink.html", form=form)
+            else:
+                flash('You must be logged in to add a drink!', 'warning')
+                return redirect('/login')
+        else:
+            return render_template("add-drink.html", form=form)
+    except IntegrityError:
+        flash('Sorry, that drink name is taken!', 'warning')
+        return redirect('/drinks/add')
+
+
+@app.route("/<int:drink_id>/ingredients/add", methods=["GET", "POST"])
+def add_ingredients(drink_id):
+    """Add ingredients and measurements to go with new drink (max 15 ingredient-measurement pairs)"""
+    d = Drink.query.get_or_404(drink_id)
+    bad_ans = ['None', None, '']
+
+    form = IngredientsForm()
+    for field in form:
+        field.choices = [
+            (i.id, i.name) for i in Ingredient.query.order_by(Ingredient.name).all()
+        ]
+
+        if field.choices:
+            field.choices.insert(0, (None, 'Select an ingredient'))
+        else:
+            field.choices = (None, "Select an ingredient")
+
+    if form.validate_on_submit():
+        count = 0
+        if g.user:
+            d_p = DrinkPost.query.filter(DrinkPost.drink_id == d.id, DrinkPost.user_id == g.user.id).first()
+            if d_p:
+                for field in form:
+                    count += 1
+                    if "ingredient" in field.id and field.data not in bad_ans:
+                        d_i = DrinkIngredient(drink_id=d.id, ingredient_id=field.data)
+
+                    elif "measurement" in field.id and field.data not in bad_ans:
+                        if d_i:
+                            d_i.measurement = field.data
+                            db.session.add(d_i)
+                            d_i = None
+
+                    elif field.data in bad_ans and count >= 3:
+                        print(f'idx = {count}, data = {field.data}')
+                        if count == 3:
+                            db.session.commit()
+                            flash(f'{d.name} has been added, thanks for your contribution!', 'success')
+                            return redirect(f"/{d.id}")
+                    
+                        elif count % 2 == 0:
+                            db.session.rollback()
+                            flash('Each ingredient must have a measurement!', 'warning')
+                            return redirect(f'/{d.id}/ingredients/add')
+                        else:
+                            db.session.commit()
+                            flash(f'{d.name} has been added, thanks for your contribution!', 'success')
+                            return redirect(f"/{d.id}")
+
+                    else:
+                        db.session.rollback()
+                        flash('One ingredient and measurement required!', 'warning')
+                        return redirect(f'/{d.id}/ingredients/add')
+            else:
+                db.session.rollback()
+                flash('You must be the author of the drink to edit ingredients!', 'danger')
+                return redirect('/')
+        else:
+            flash('You must be logged in to access this feature!', 'warning')
+            return redirect('/')
+    else:
+        return render_template("add-ingredients.html", form=form, drink=d)
+
+@app.route("/delete/<int:drink_id>")
+def delete_drink(drink_id):
+    """If author is g.user delete drink and redirect to profile"""
+
+    if g.user:
+        drink = Drink.query.get_or_404(drink_id)
+        post = DrinkPost.query.filter(
+            DrinkPost.drink_id == drink_id, DrinkPost.user_id == g.user.id
+        ).first()
+
+        if post:
+            db.session.delete(drink)
+            db.session.delete(post)
+            db.session.commit()
+
+            flash(f"{drink.name} has now been deleted!", "warning")
+            return redirect(f"/profile/{g.user.id}")
+        else:
+            flash("Sorry, only the author of this drink post can delete it!", "danger")
+            return redirect(f"/")
+    else:
+        flash('You must be logged in to access this feature!', 'warning')
+        return redirect('/')
+
+
+@app.route("/<int:drink_id>/edit", methods=['GET', 'POST'])
+def edit_drink(drink_id):
+    '''Edit drink form'''
+
+    drink = Drink.query.get_or_404(drink_id)
+    form = DrinkForm(obj=drink)
+
+    form.category_id.choices = [
+        (c.id, c.name) for c in Category.query.order_by(Category.name).all()
+    ]
+    form.category_id.choices.insert(0, (None, 'Select category'))
+
+    if form.validate_on_submit():
+        if g.user:
+            if form.category_id.data != 'None':
+                if DrinkPost.query.filter(
+                    DrinkPost.drink_id == drink_id, DrinkPost.user_id == g.user.id
+                ).first():
+                    drink.name = form.name.data or drink.name
+                    drink.category_id = form.category_id.data or drink.category_id
+                    drink.instructions = form.instructions.data or drink.instructions
+                    drink.image = form.image.data or drink.image
+
+                    db.session.add(drink)
+                    db.session.commit()
+
+                    flash('You have made changes', 'success')
+                    return redirect(f'/{drink.id}')
+                else:
+                    flash('Only the author can edit', 'danger')
+            else:
+                flash('A category must be selected', 'warning')
+                return render_template('edit-drink.html', form=form, drink=drink)
+        else:
+            flash('Login in to edit drinks', 'warning')
+            return redirect('/')
+    else:
+        return render_template('edit-drink.html', form=form, drink=drink)
+
+
+@app.route('/<int:drink_id>/<int:ingredient_id>/edit', methods=['GET', 'POST'])
+def edit_drink_ingredient(drink_id, ingredient_id):
+    """If author is g.user edit drink ingredient and redirect to drink page"""
+    
+    d_i = DrinkIngredient.query.filter(DrinkIngredient.drink_id == drink_id, DrinkIngredient.ingredient_id == ingredient_id).first()
+    drink = Drink.query.get_or_404(drink_id)
+    form = EditDrinkIngredientForm(obj=d_i)
+    form.ingredient_id.choices = [
+            (i.id, i.name) for i in Ingredient.query.order_by(Ingredient.name).all()
+        ]
+    form.ingredient_id.choices[0] = (None, "Select an ingredient")
+
+    if form.validate_on_submit():
+        if g.user:
+            post = DrinkPost.query.filter(
+                DrinkPost.drink_id == drink_id, DrinkPost.user_id == g.user.id
+            ).first()
+
+            if post:
+                if form.ingredient_id.data == 'None': form.ingredient_id.data = d_i.ingredient.id
+
+                d_i.ingredient_id = form.ingredient_id.data
+                d_i.measurement = form.measurement.data
+
+                db.session.commit()
+
+                flash(f'{drink.name} has been updated!', 'success')
+                return redirect(f'/{drink.id}')
+            else:
+                flash("Sorry, only the author of this drink can edit ingredients!", "danger")
+                return redirect(f"/")
+        else:
+            flash('You must be logged in to access this feature!', 'warning')
+            return redirect('/')
+    else:
+        return render_template('edit-ingredient.html', form=form, drink=drink)
+    
+
+@app.route('/<int:drink_id>/<int:ingredient_id>/delete')
+def delete_drink_ingredient(drink_id, ingredient_id):
+    """If author is g.user delete drink ingredient"""
+
+    if g.user:
+        d_i = DrinkIngredient.query.filter(DrinkIngredient.drink_id == drink_id, DrinkIngredient.ingredient_id == ingredient_id).first()
+        post = DrinkPost.query.filter(DrinkPost.drink_id == drink_id, DrinkPost.user_id == g.user.id).first()
+
+        if post:
+            db.session.delete(d_i)
+            db.session.commit()
+
+            flash('Ingredient has been deleted!', 'warning')
+            return redirect(f'/{drink_id}')
+        else:
+            flash("Sorry, only the author of this drink can delete ingredients!", "danger")
+            return redirect(f"/")    
+
+    else:
+        flash('You must be logged in to access this feature!', 'warning')
+        return redirect('/')
+
+
+@app.route("/search", methods=["POST"])
+def show_search_results():
+    """Query database for any matching drinks and display results"""
+
+    form = SearchForm()
+
+    if form.validate_on_submit():
+        if g.user:
+            q = form.search.data
+            results = get_search_results(q)
+            
+            return render_template(
+                "drinks.html",
+                drinks=results,
+                title=f"{len(results)} Search Results for '{q}'",
+            )
+        else:
+            flash('You must be logged in to access this feature!', 'warning')
+        return redirect('/')
+    else:
+        flash("Something went wrong, please try again!", "warning")
+        return redirect("/")
+
+
+def get_search_results(q):
+    """Search DB for input string"""
+
+    results = []
+
+    ingredients = Ingredient.query.filter(
+        Ingredient.name.ilike(f"%{q}%")).all()
+    if ingredients:
+        for ingredient in ingredients:
+            for drink in ingredient.drinks:
+                if drink.drink != None:
+                    results.append(drink.drink)
+
+    categories = Category.query.filter(Category.name.ilike(f"%{q}%")).all()
+    if categories:
+        for category in categories:
+            for drink in category.drinks:
+                if drink != None and drink not in results:
+                    results.append(drink)
+
+    drinks = Drink.query.filter(Drink.name.ilike(f"%{q}%")).all()
+    if drinks:
+        for drink in drinks:
+            if drink != None and drink not in results:
+                results.append(drink)
+
+    return results

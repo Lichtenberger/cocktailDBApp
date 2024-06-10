@@ -1,0 +1,42 @@
+{% extends 'base.html' %} {% block content %} {% if g.user %}
+{% set drink = drinks[0] %}
+{% set post = DrinkPost.query.filter_by(drink_id=drink.id).first() %}
+
+<h2 class="text-center mt-2">Suggestions</h2>
+
+<div class="container-fluid col-12 col-lg-8 mx-auto mt-3 pt-3 pb-3 bg-light">
+	<div id="suggestionsCarousel" class="carousel slide" data-bs-ride="carousel">
+		<div class="carousel-inner">
+			{% for drink in drinks %}
+			{% set drink_loop = loop %}
+			{% if drink_loop.index == 1 %}
+			<div class="carousel-item active">
+				<div class="carousel-caption d-none d-block">
+					<h2><a href="/{{drink.id}}" class="text-white bg-dark">{{drink.name}}</a></h2>
+				</div>
+				<img src="{{drink.image}}" class="d-block img-fluid mx-auto" alt="...">
+			</div>
+			{% else %}
+			<div class="carousel-item">
+				<div class="carousel-caption d-none d-block">
+					<h2><a href="/{{drink.id}}" class="text-white bg-dark">{{drink.name}}</a></h2>
+				</div>
+				<img src="{{drink.image}}" class="d-block img-fluid mx-auto" alt="...">
+			</div>
+			{% endif %}
+			{% endfor %}
+		</div>
+	</div>
+</div>
+
+{% else %}
+
+<div class="container-fluid text-center">
+	<h2 class="mt-4">The Cocktail Club</h2>
+	<p>
+		If you are new <a href="/signup">signing up</a>. If
+		you have an existing account <a href="/login">Log In</a>!
+	</p>
+</div>
+
+{% endif %} {% endblock %}

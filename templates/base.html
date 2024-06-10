@@ -1,45 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cocktail Club App</title>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<script
+			src="https://code.jquery.com/jquery-3.7.0.slim.js"
+			integrity="sha256-7GO+jepT9gJe9LB4XFf8snVOjX3iYNb0FHYr5LI1N5c="
+			crossorigin="anonymous"
+		></script>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/superhero/bootstrap.min.css"
+			integrity="sha384-HnTY+mLT0stQlOwD3wcAzSVAZbrBp141qwfR4WfTqVQKSgmcgzk+oP0ieIyrxiFO"
+			crossorigin="anonymous"
+		/>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+		<link rel="stylesheet" href="/static/style.css" />
+		<title>{% block title %} {% endblock %}</title>
+	</head>
+	<body>
+		<nav class="navbar navbar-expand-lg navbar-dark bg-light sticky-top">
+			<div class="container-fluid">
+				<button
+					class="navbar-toggler btn btn-secondary"
+					type="button"
+					data-bs-toggle="collapse"
+					data-bs-target="#navbar"
+					aria-controls="navbar"
+					aria-expanded="false"
+					aria-label="Toggle navigation"
+				>
+					<span class="navbar-toggler-icon"></span>
+				</button>
+				<div class="collapse navbar-collapse pr-0" id="navbar">
+					<div class="container-fluid">
+						<ul class="navbar-nav nav me-auto justify-content-end">
+							{% if g.user %}
 
-    <link rel="stylesheet"
-        href="https://unpkg.com/bootstrap/dist/css/bootstrap.css">
-    <script src="https://unpkg.com/jquery"></script>
-    <script src="https://unpkg.com/popper"></script>
-    <script src="https://unpkg.com/bootstrap"></script>
-</head>
-<body class="{% block body_class %}{% endblock %}">
-    <nav class="navbar navbar-expand">
-        <div class="container-fluid">
-          <ul class="nav navbar-nav navbar-right">
-            {% if request.endpoint != None %}
-            <li>
-              <form class="navbar-form navbar-right" action="/users">
-                <input name="q" class="form-control" placeholder="Search" id="search">
-                <button class="btn btn-default">
-                  <span class="fa fa-search"></span>
-                </button>
-              </form>
-            </li>
-            {% endif %}
-            {% if not g.user %}
-            <li><a href="/register">Sign up</a></li>
-            <li><a href="/login">Log in</a></li>
-            {% else %}
-            <li>
-              <a href="/users/{{ g.user.id }}">
-                <img src="{{ g.user.image_url }}" alt="{{ g.user.username }}">
-              </a>
-            </li>
-            <li><a href="/logout">Log out</a></li>
-            {% endif %}
-          </ul>
-        </div>
-      </nav>
-    <h1>Cocktail Club App</h1>
-    <p>Please remember to drink responsibly, that means don't waste any alcohol.</p>
-</body>
+							<li class="nav-item">
+								<a class="nav-link text-dark" href="/profile/{{g.user.id}}">Profile </a>
+							</li>
+
+							{% endif %}
+							<li class="nav-item dropdown">
+								<a
+									class="nav-link dropdown-toggle text-dark"
+									data-bs-toggle="dropdown"
+									href="#"
+									role="button"
+									aria-haspopup="true"
+									aria-expanded="false"
+									>Categories</a
+								>
+								<div class="dropdown-menu">
+									{% for category in categories %}
+
+									<a class="dropdown-item" href="/drinks/category/{{category.id}}">{{category.name}}</a>
+
+									{% endfor %}
+								</div>
+							</li>
+							
+						</ul>
+					</div>
+					<div class="container-fluid search justify-content-end pr-0 pl-0">
+						{% if g.user %}
+						<form method="POST" id="search_form" action="/search" class="col-12 col-lg-8">
+							{{ search_form.hidden_tag() }} {% for field in search_form if field.widget.input_type !=
+							'hidden' %} {% for error in field.errors %}
+							<span class="text-danger">{{ error }}</span>
+							{% endfor %} {{ field(placeholder=field.label.text, class="form-control col-8") }} {% endfor %}
+
+							<button class="btn btn-secondary ml-1 col-3">Search</button>
+						</form>
+
+							<a href="/logout" class="btn btn-warning text-center justify-content-end logout">Logout</a>
+
+						{% else %}
+
+								<a href="/login" class="btn btn-success text-center mr-1">Login</a>
+
+								<a href="/signup" class="btn btn-info text-center ml-1">Signup</a>
+
+						{% endif %}
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		{% for category, message in get_flashed_messages(with_categories=True) %}
+		<div class="alert alert-dismissable alert-{{ category }} mx-auto text-center mb-0 mt-2 pb-0 pt-0 pl-0 pr-0">
+			<h5 class="alert-heading mt-0 pb-2 pt-1 pl-2 pr-2">{{message}}</h3>
+		</div>
+		{% endfor %} {% block content %} {% endblock %}
+
+		<script
+			src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"
+			integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm"
+			crossorigin="anonymous"
+		></script>
+		<script src="/static/app.js"></script>
+	</body>
 </html>

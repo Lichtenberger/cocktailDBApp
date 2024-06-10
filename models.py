@@ -1,22 +1,6 @@
-from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 
-bcrypt = Bcrypt()
 db = SQLAlchemy()
-
-class Cocktails(db.Model):
-    '''Cocktails'''
-
-    __tablename__ = 'cocktails'
-
-    name = db.Column(db.Text, )
-    image = db.Column(db.Text, )
-    instructions = db.Column(db.Text, )
-    ingredients = db.Column(db.Text, )
-    measurements = db.Column(db.Text, )
-
-
-'''' USER CLASS'''
 
 
 class User(db.Model):
@@ -27,24 +11,21 @@ class User(db.Model):
     id = db.Column(
         db.Integer,
         primary_key=True,
-    )
-
-    email = db.Column(
-        db.Text,
-        nullable=False,
-        unique=True,
+        autoincrement=True,
     )
 
     username = db.Column(
-        db.Text,
+        db.String,
         nullable=False,
         unique=True,
     )
 
     password = db.Column(
-        db.Text,
+        db.String,
         nullable=False,
     )
+
+    drinkposts = db.relationship('DrinkPost', backref='creator', lazy=True)
 
 
     def __repr__(self):
@@ -52,18 +33,14 @@ class User(db.Model):
 
 
     @classmethod
-    def signup(cls, username, email, password):
+    def signup(cls, username, password):
         """Sign up user.
-
-        Hashes password and adds user to system.
         """
 
-        hashed_pwd = bcrypt.generate_password_hash(password).decode('UTF-8')
 
         user = User(
             username=username,
-            email=email,
-            password=hashed_pwd,
+            password=password,
         )
 
         db.session.add(user)
@@ -83,8 +60,80 @@ class User(db.Model):
         user = cls.query.filter_by(username=username).first()
 
         if user:
-            is_auth = bcrypt.check_password_hash(user.password, password)
+            is_auth = (user.password, password)
             if is_auth:
                 return user
 
         return False
+
+
+
+class Drink(db.Model):
+    '''Drink'''
+
+    __tablename__ = 'drinks'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    api_id = db.Column(db.Integer, unique=True)
+    name = db.Column(db.String, unique=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    category = db.relationship('Category', backref=db.backref('drinks', lazy=True))
+    instructions = db.Column(db.String, )
+    image = db.Column(db.String)
+    category = db.relationship('Category', backref='drinks')
+
+''' Ingredients class '''
+class Ingredient(db.Model):
+
+    __tablename__ = 'ingredients'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String, unique=True)
+    description = db.Column(db.String)
+    abv = db.Column(db.String, default='Non-Alcoholic')
+
+
+class Category(db.Model):
+
+    __tablename__ = 'categories'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String, unique=True, nullable=False)
+
+class DrinkIngredient(db.Model):
+
+    __tablename__ = 'drink_ingredients'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    drink_id = db.Column(db.Integer, db.ForeignKey('drinks.id', ondelete='CASCADE'))
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredients.id', ondelete='CASCADE'))
+    measurement = db.Column(db.String, default='Personal preference')
+    drink = db.relationship('Drink', backref='ingredients')
+    ingredient = db.relationship('Ingredient', backref='drinks')
+
+
+class Favorite(db.Model):
+
+    __tablename__ = 'favorites'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
+    drink_id = db.Column(db.Integer, db.ForeignKey('drinks.id', ondelete='CASCADE'))
+    user = db.relationship('User', backref='favorites')
+    drink = db.relationship('Drink', backref='favorites')
+
+
+class DrinkPost(db.Model):
+
+    __tablename__ = 'drinkposts'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
+    drink_id = db.Column(db.Integer, db.ForeignKey('drinks.id'))
+    user = db.relationship('User', backref='add_drink')
+    drink = db.relationship('Drink', backref='user')
+
+
+def connect_db(app):
+    db.app = app
+    db.init_app(app)

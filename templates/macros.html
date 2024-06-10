@@ -1,0 +1,14 @@
+{% macro check_favorites(drink, favorites) %}
+    {% if drink in favorites %}
+        <p>This drink is in your favorites.</p>
+    {% else %}
+        <p>This drink is not in your favorites</p>
+    {% endif %}
+{% endmacro %}
+{% macro check_user(post) %}
+    {% if post.user == g.user %}
+        <p>You can edit this post</p>
+    {% else %}
+	<p>You can not edit this post</p>
+    {% endif %}
+{% endmacro %}

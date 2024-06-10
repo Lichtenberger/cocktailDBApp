@@ -68,10 +68,6 @@ div.alert {
     border-radius: .08cm;
 }
 
-/* Responsive Queries for mobile */
-
-/* Extra small - default bootstrap breakpoint */
-
 @media only screen and (max-width: 575px) {
 
     h5.add-msg {
@@ -94,8 +90,6 @@ div.alert {
     }
 }
 
-/* Applies to small breakpoint */
-
 @media only screen and (min-width: 576px) and (max-width: 1399px) {
     form#search_form {
         margin-top: 15px;
@@ -112,9 +106,6 @@ div.alert {
         margin-bottom: 25px;
     }
 }
-
-
-/* Applies to large breakpoint */
 
 @media only screen and (min-width: 1400px) {
 

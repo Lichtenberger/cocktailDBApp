@@ -8,25 +8,11 @@ class User(db.Model):
 
     __tablename__ = 'users'
 
-    id = db.Column(
-        db.Integer,
-        primary_key=True,
-        autoincrement=True,
-    )
-
-    username = db.Column(
-        db.String,
-        nullable=False,
-        unique=True,
-    )
-
-    password = db.Column(
-        db.String,
-        nullable=False,
-    )
-
-    drinkposts = db.relationship('DrinkPost', backref='creator', lazy=True)
-
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,)
+    username = db.Column(db.String, nullable=False, unique=True,)
+    password = db.Column(db.String,nullable=False,)
+    drinkposts = db.relationship('DrinkPost', back_populates='user', lazy=True)
+# backref='creator'
 
     def __repr__(self):
         return f"<User #{self.id}: {self.username}, {self.email}>"
@@ -130,7 +116,7 @@ class DrinkPost(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'))
     drink_id = db.Column(db.Integer, db.ForeignKey('drinks.id'))
-    user = db.relationship('User', backref='add_drink')
+    user = db.relationship('User', back_populates='drinkposts')
     drink = db.relationship('Drink', backref='user')
 
 

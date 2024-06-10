@@ -26,8 +26,6 @@ $('body').on('click', '.page-link-num', function(evt) {
 	show_next_results(btn);
 });
 
-// Listen for when plus button is clicked on ingredients form and add 
-// another field 
 
 function add_ingredient_fields() {
 	let bottom = $('input.ing-form:visible').last();
@@ -42,7 +40,6 @@ function add_ingredient_fields() {
 	hide_if_no_more();
 }
 
-// Hide plus button once all fields are visible
 
 function hide_if_no_more() {
 	if ($('.ing-form:hidden').length === 0) {
@@ -52,7 +49,6 @@ function hide_if_no_more() {
 
 $('.bi-plus-lg').on('click', add_ingredient_fields);
 
-// Button for removing optional ingredient fields after being added
 
 function remove_ingredient_fields(btn) {
 	let next = $(btn.next());
@@ -69,8 +65,6 @@ $('#ingredients_form').on('click', '.bi-dash-circle', function(evt) {
 	remove_ingredient_fields(btn);
 });
 
-// Move search bar and logout, login and signup buttons to center
-// when nav not collapsed
 let clickable = true;
 $('body').on('click', '.navbar-toggler-icon', function(evt) {
 	let btn = $(evt.target);
@@ -94,13 +88,11 @@ $('body').on('click', '.navbar-toggler-icon', function(evt) {
 		
 });
 
-// If on mobile toggle smaller pagination element
 if ($('body').width() < 1400) {
 	$('ul.pagination').toggleClass('pagination-lg');
 }
 
 
-// Trigger share menu when share button clicked
 $('body').on('click', 'a.share', function(evt) {
 	if (navigator.share) {
 		navigator.share({

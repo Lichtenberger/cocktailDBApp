@@ -27,12 +27,12 @@
 			{% endif %}
 			{% if g.user %}
 			<div class="row container-fluid justify-content-between text-center m-0 p-0">
-				<h6 class="card-subtitle mb-0 col-6"><small>Likes: {{len(drink.favorites)}}</small></h6>
+				<h6 class="card-subtitle mb-0 col-6"><small>Likes: {{ likes }}</small></h6>
 			</div>
 			{% endif %}
 		</div>
 		<img src="{{drink.image}}" class="card-img-bottom" alt="#" />
-		{% if g.user and check_favorites(drink, g.favorites) %}
+		{% if g.user and check_favorites(drink_id) %}
 		<div class="row container justify-content-between mx-auto p-0">
 			<a href="/{{drink.id}}/favorite/delete" class="btn btn-danger align-self-start pb-0 pt-0 mt-2 mb-2 mr-2 col-5 dislike"><i class="bi bi-heart"></i></a>
 			<a href="/{{drink.id}}" class="btn btn-info mt-2 mb-2 ml-2 col-5 align-self-end">Details</a>
@@ -67,7 +67,7 @@
 				{% endif %}
 			</div>
 			<img src="{{drink.image}}" class="card-img-bottom" alt="#" />
-			{% if g.user and check_favorites(drink, g.favorites) %}
+			{% if g.user and check_favorites(drink_id) %}
 			<div class="row container justify-content-between mx-auto p-0">
 				<a href="/{{drink.id}}/favorite/delete" class="btn btn-danger align-self-start pb-0 pt-0 mt-2 mb-2 mr-2 col-5 dislike"><i class="bi bi-heart"></i></a>
 				<a href="/{{drink.id}}" class="btn btn-info mt-2 mb-2 ml-2 col-5 align-self-end">Details</a>
@@ -90,11 +90,15 @@
 {% if drinks|length > 50 %}
 
 		<ul class="pagination pagination-lg mx-auto col-12 justify-content-center mt-3 pr-0">
-		{% if ((len(drinks) - 1) / 50) is even %}
-		{% set stop_at = len(drinks) / 50 %}
-		{% else %}
-		{% set stop_at = math.ceil(len(drinks) / 50) %}
-		{% endif %}
+			{% if drinks|length %}  {# checks if drinks list is not empty #}
+				{% set drink_count = drinks|length %}
+				{% if drink_count % 50 == 0 %}
+					{# do something #}
+				{% endif %}
+			{% endif %}
+		
+		
+		{% set stop_at = 50 %} {# define stop_at #}
 		{% for drink in drinks %}
 		{% set page_loop = loop %}
 		{% if page_loop.index < stop_at and page_loop.index == 1 %}	  		

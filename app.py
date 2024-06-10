@@ -10,13 +10,12 @@ from forms import SignupForm, LoginForm, DrinkForm, SearchForm, IngredientsForm,
 CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
+app.app_context().push()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost:5432/cocktailsdb')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-
-# app.jinja_env = Environment(autoescape=select_autoescape(['html', 'xhtml']), undefined='strict')
 
 
 connect_db(app)
@@ -31,14 +30,12 @@ def inject_data():
 
 def inject_funcs():
     
+    check_favorites = add_favorites_to_g()
     return dict(check_favorites=check_favorites, check_author=check_author, len=len, math=math)
 
-def check_favorites():
-    check_favorites = add_favorites_to_g()
-    pass
-app.jinja_env.globals.update(check_favorites=check_favorites)
     
 def check_author(post):
+    
     if g.user == post.user:
         return True
     else: 
@@ -54,13 +51,25 @@ def add_user_to_g():
     else:
         g.user = None
 
-@app.before_request
 def add_favorites_to_g():
-
-    if g.user:
+    if 'curr_user' in session:
+        g.user = User.query.get(session['curr_user'])
         g.favorites = [f.drink for f in g.user.favorites]
-    else: 
+    else:
+        g.user = None
         g.favorites = None
+
+@app.before_request
+def before_request():
+    add_favorites_to_g()
+
+def check_favorites(drink_id):
+    if g.favorites:
+        return drink_id in g.favorites
+    else:
+        return False
+
+app.jinja_env.globals.update(check_favorites=check_favorites)
         
 
 def sess_login(user):
@@ -84,10 +93,17 @@ def get_random_drink():
 
         return drink_list
 
+def get_drinks_from_database():
+
+    from models import Drink
+    drinks = Drink.query.all()
+    return drinks
+
 @app.route("/")
 def show_home():
     """Show homepage - if logged in showcase random drink"""
 
+    drinks = get_drinks_from_database()
     if g.user and g.favorites:
         return render_template("home.html", drinks=drinks)
     elif g.user and not g.favorites: 
@@ -238,8 +254,10 @@ def show_category_drinks(category_id):
 
     category = Category.query.get_or_404(category_id)
     drinks = category.drinks
+    drink_count = len(drinks)
+    stop_at = 50
 
-    return render_template("drinks.html", drinks=drinks, title=f"{category.name}")
+    return render_template("drinks.html", drinks=drinks, title=f"{category.name}", drink_count=drink_count, stop_at=stop_at)
 
 @app.route("/drinks/add", methods=["GET", "POST"])
 def add_drink():
